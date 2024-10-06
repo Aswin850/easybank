@@ -66,6 +66,9 @@ management:
     health:
       probes:
         enabled: true
+  metrics:
+    tags:
+      application: "loans"
 
 
 logging:

@@ -61,6 +61,9 @@ management:
     health:
       probes:
         enabled: true
+  metrics:
+    tags:
+      application: "cards"
 
 logging:
   level:

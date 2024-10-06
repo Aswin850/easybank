@@ -1,21 +1,6 @@
 encrypt:
   key: CB79DCD7F777C8B3FEFAE9FF29EFD
 
-management:
-  endpoints:
-    web:
-      exposure:
-        include: "*"
-  health:
-    readiness-state:
-      enabled: true
-    liveness-state:
-      enabled: true
-  endpoint:
-    health:
-      probes:
-        enabled: true
-
 server:
   port: 8071
 
@@ -39,3 +24,21 @@ spring:
 #          search-locations: "file:/Users/asenniappan/eclipse-workspace/microServices/document/config"
 #          search-location: "classpath:/config"
 
+
+management:
+  endpoints:
+    web:
+      exposure:
+        include: "*"
+  health:
+    readiness-state:
+      enabled: true
+    liveness-state:
+      enabled: true
+  endpoint:
+    health:
+      probes:
+        enabled: true
+  matrics:
+    tags:
+      application: "configserver"
