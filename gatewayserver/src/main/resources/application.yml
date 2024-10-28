@@ -3,6 +3,12 @@ spring:
   application:
    name: gatewayserver
 
+  security:
+    oauth2:
+      resourceserver:
+        jwt:
+          jwk-set-uri: "http://localhost:7080/realms/master/protocol/openid-connect/certs"
+
   cloud:
     gateway:
       discovery:
@@ -45,6 +51,9 @@ logging:
     com:
       easybank:
         gatewayserver: DEBUG
+  pattern:
+    level: "%5p [${spring.application.name},%X{trace_id},%X{span_id}]"
+
 
 
 resilience4j.circuitbreaker:

@@ -2,26 +2,33 @@ package com.easybank.cards.service.impl;
 
 import com.easybank.cards.constant.CardsConstants;
 import com.easybank.cards.dto.CardsDTO;
+import com.easybank.cards.dto.CardsMessageDTO;
 import com.easybank.cards.entity.Cards;
 import com.easybank.cards.exception.CardAlreadyExistsException;
 import com.easybank.cards.exception.ResourceNotFoundException;
 import com.easybank.cards.mapper.CardsMapper;
 import com.easybank.cards.repository.CardsRepository;
 import com.easybank.cards.service.ICardsService;
+import lombok.AllArgsConstructor;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.cloud.stream.function.StreamBridge;
 import org.springframework.stereotype.Service;
 
 import java.util.Optional;
 import java.util.Random;
 
 @Service
+@AllArgsConstructor
 public class CardsService implements ICardsService {
-    private CardsRepository cardsRepository;
 
-    @Autowired
-    public  CardsService(CardsRepository cardsRepository){
-        this.cardsRepository=cardsRepository;
-    }
+    public static final Logger LOGGER = LoggerFactory.getLogger(CardsService.class);
+
+    private CardsRepository cardsRepository;
+    private StreamBridge streamBridge;
+
+
 
     @Override
     public void createNewCardAccount(String mobileNumber) {
@@ -29,8 +36,18 @@ public class CardsService implements ICardsService {
         if(card.isPresent()){
             throw  new CardAlreadyExistsException("Card already registered with given mobileNumber "+mobileNumber);
         }
-        cardsRepository.save(createCardAccount(mobileNumber));
+        Cards cardsSaved= cardsRepository.save(createCardAccount(mobileNumber));
+        sendConfirmation(cardsSaved);
     }
+
+    private void sendConfirmation(Cards cardsSaved) {
+        var cardsMessageDto=new CardsMessageDTO(cardsSaved.getCardNumber(),cardsSaved.getMobileNumber(),cardsSaved.getCardType(),cardsSaved.getAvailableAmount());
+        LOGGER.info("Sending account creation confirmation message with details {}",cardsMessageDto);
+        var result= streamBridge.send("send-confirmation",cardsMessageDto);
+        LOGGER.info("Sending account creation confirmation triggered {}",result);
+
+    }
+
 
     private Cards createCardAccount(String mobileNumber) {
         Cards card=new Cards();

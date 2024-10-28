@@ -30,6 +30,7 @@
 	<properties>
 		<java.version>21</java.version>
 		<spring-cloud.version>2023.0.3</spring-cloud.version>
+		<oteVersion>1.33.5</oteVersion>
 	</properties>
 	<dependencies>
 		<dependency>
@@ -39,6 +40,12 @@
 		<dependency>
 			<groupId>io.micrometer</groupId>
 			<artifactId>micrometer-registry-prometheus</artifactId>
+		</dependency>
+		<dependency>
+			<groupId>io.opentelemetry.javaagent</groupId>
+			<artifactId>opentelemetry-javaagent</artifactId>
+			<version>${oteVersion}</version>
+			<scope>runtime</scope>
 		</dependency>
 		<dependency>
 			<groupId>org.springframework.cloud</groupId>
@@ -75,7 +82,7 @@
 				<version>3.4.2</version>
 				<configuration>
 					<to>
-						<image>aswinsenniappan/eurekaserver:v4</image>
+						<image>aswinsenniappan/eurekaserver:v5</image>
 					</to>
 				</configuration>
 			</plugin>

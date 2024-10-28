@@ -67,8 +67,9 @@ public class LoansController {
     @GetMapping("/fetch")
     public ResponseEntity<LoanDTO> fetchLoansDetails(@RequestHeader(name = "easybank_correlation_id") String correlationID, @RequestParam(name = "mobileNumber") @Pattern(regexp ="^[0-9]{10}$" ,message = "Invalid mobile number, Please enter a valid one") String mobileNumber){
 
-        LOGGER.debug("easyBank-correlation_id found :{}",correlationID);
+        LOGGER.debug("fetchLoansDetails method start");
         LoanDTO loanDTO=loansService.getLoanDetails(mobileNumber);
+        LOGGER.debug("fetchLoansDetails method end");
         return ResponseEntity.status(HttpStatus.OK).body(loanDTO);
 
     }

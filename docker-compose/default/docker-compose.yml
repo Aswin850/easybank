@@ -1,4 +1,38 @@
 services:
+  kafka:
+    image: docker.io/bitnami/kafka:3.7
+    ports:
+      - "9092:9092"
+    volumes:
+      - "kafka_data:/bitnami"
+    environment:
+      # KRaft settings
+      - KAFKA_CFG_NODE_ID=0
+      - KAFKA_CFG_PROCESS_ROLES=controller,broker
+      - KAFKA_CFG_CONTROLLER_QUORUM_VOTERS=0@kafka:9093
+      # Listeners
+      - KAFKA_CFG_LISTENERS=PLAINTEXT://:9092,CONTROLLER://:9093
+      - KAFKA_CFG_ADVERTISED_LISTENERS=PLAINTEXT://:9092
+      - KAFKA_CFG_LISTENER_SECURITY_PROTOCOL_MAP=CONTROLLER:PLAINTEXT,PLAINTEXT:PLAINTEXT
+      - KAFKA_CFG_CONTROLLER_LISTENER_NAMES=CONTROLLER
+      - KAFKA_CFG_INTER_BROKER_LISTENER_NAME=PLAINTEXT
+    extends:
+      file: common-config.yml
+      service: network-deploy-service
+
+  keycloak:
+    image: quay.io/keycloak/keycloak:25.0.2
+    container_name: keycloak
+    ports:
+      - "7080:8080"
+    environment:
+      KEYCLOAK_ADMIN: "admin"
+      KEYCLOAK_ADMIN_PASSWORD: "admin"
+    command: "start-dev"
+    extends:
+      file: common-config.yml
+      service: network-deploy-service
+
   read:
     image: grafana/loki:3.1.0
     command: "-config.file=/etc/loki/config.yaml -target=read"
@@ -63,6 +97,18 @@ services:
       file: common-config.yml
       service: network-deploy-service
 
+  tempo:
+    image: grafana/tempo:latest
+    container_name: tempo
+    command: -config.file /etc/tempo-config.yml
+    ports:
+      - "3110:3100"
+      - "4317:4317"
+    volumes:
+      - ../observability/tempo/tempo.yml:/etc/tempo-config.yml
+    extends:
+      file: common-config.yml
+      service: network-deploy-service
 
   minio:
     image: minio/minio
@@ -103,34 +149,11 @@ services:
       - sh
       - -euc
       - |
-        mkdir -p /etc/grafana/provisioning/datasources
-        cat <<EOF > /etc/grafana/provisioning/datasources/ds.yaml
-        apiVersion: 1
-        datasources:
-          - name: Prometheus
-            type: prometheus
-            uid: prometheus
-            url: http://prometheus:9090
-            access: proxy
-            orgId: 1
-            basicAuth: false
-            isDefault: false
-            version: 1
-            editable: true
-            jsonData:
-             httpMethod: GET
-          - name: Loki
-            type: loki
-            access: proxy
-            url: http://gateway:3100
-            jsonData:
-              httpHeaderName1: "X-Scope-OrgID"
-            secureJsonData:
-              httpHeaderValue1: "tenant1"
-        EOF
         /run.sh
     ports:
       - "3000:3000"
+    volumes:
+      - ../observability/grafana/datasource.yml:/etc/grafana/provisioning/datasources/datasource.yml
     healthcheck:
       test: [ "CMD-SHELL", "wget --no-verbose --tries=1 --spider http://localhost:3000/api/health || exit 1" ]
       interval: 10s
@@ -225,7 +248,7 @@ services:
       service: network-deploy-service
 
   configserver:
-    image: "aswinsenniappan/configserver:v4"
+    image: "aswinsenniappan/configserver:v5"
     container_name: configserver-ms
     ports:
       - "8071:8071"
@@ -240,7 +263,7 @@ services:
       start_period: 10s
 
   eurekaserver:
-    image: "aswinsenniappan/eurekaserver:v4"
+    image: "aswinsenniappan/eurekaserver:v5"
     container_name: eurekaserver-ms
     ports:
       - "8070:8070"
@@ -260,7 +283,7 @@ services:
       SPRING_APPLICATION_NAME: eurekaserver
 
   accounts:
-    image: "aswinsenniappan/accounts:v4"
+    image: "aswinsenniappan/accounts:v5"
     container_name: accounts-ms
     ports:
       - "8080:8080"
@@ -276,12 +299,13 @@ services:
        condition: service_healthy
     environment:
       SPRING_APPLICATION_NAME: accounts
+      SPRING_CLOUD_STREAM_KAFKA_BINDER_BROKERS: "kafka:9092"
     extends:
       file: common-config.yml
       service: microservice-configserver-config
 
   loans:
-    image: "aswinsenniappan/loans:v4"
+    image: "aswinsenniappan/loans:v5"
     container_name: loans-ms
     ports:
       - "8090:8090"
@@ -297,13 +321,14 @@ services:
          condition: service_healthy
     environment:
       SPRING_APPLICATION_NAME: loans
+      SPRING_CLOUD_STREAM_KAFKA_BINDER_BROKERS: "kafka:9092"
     extends:
       file: common-config.yml
       service: microservice-configserver-config
 
 
   cards:
-    image: "aswinsenniappan/cards:v4"
+    image: "aswinsenniappan/cards:v5"
     container_name: cards-ms
     ports:
       - "9000:9000"
@@ -318,18 +343,38 @@ services:
         condition: service_healthy
     environment:
       SPRING_APPLICATION_NAME: cards
+      SPRING_CLOUD_STREAM_KAFKA_BINDER_BROKERS: "kafka:9092"
     extends:
       file: common-config.yml
       service: microservice-configserver-config
 
+  message:
+    image: "aswinsenniappan/message:v5"
+    container_name: message-ms
+    environment:
+      SPRING_CLOUD_STREAM_KAFKA_BINDER_BROKERS: "kafka:9092"
+    extends:
+      file: common-config.yml
+      service: network-deploy-service
+
+  confirmation:
+    image: "aswinsenniappan/confirmation:v5"
+    container_name: confirmation-ms
+    environment:
+      SPRING_CLOUD_STREAM_KAFKA_BINDER_BROKERS: "kafka:9092"
+    extends:
+      file: common-config.yml
+      service: network-deploy-service
+
   gatewayserver:
-    image: "aswinsenniappan/gatewayserver:v4"
+    image: "aswinsenniappan/gatewayserver:v5"
     container_name: gatewayserver-ms
     ports:
       - "8072:8072"
 
     environment:
       SPRING_APPLICATION_NAME: "gatewayserver"
+      SPRING_SECURITY_OAUTH2_RESOURCESERVER_JWT_JWK-SET-URI: "http://keycloak:8080/realms/master/protocol/openid-connect/certs"
 
     extends:
       file: common-config.yml
@@ -343,6 +388,12 @@ services:
       cards:
         condition: service_healthy
 
+
+volumes:
+  kafka_data:
+    driver: local
+
 networks:
   eazybank:
     driver: "bridge"
+

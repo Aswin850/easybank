@@ -10,4 +10,5 @@ public interface ILoansService {
     LoanDTO getLoanDetails(String mobileNumber);
     boolean updateLoanDetails(LoanDTO loanDTO);
     boolean deleteLoan(String mobileNumber);
+    boolean updateCommunicationStatus(String loanAccountNumber);
 }

@@ -33,6 +33,32 @@ spring:
       circuitbreaker:
         enabled: true
 
+    function:
+      definition: updateCommunication
+
+    stream:
+      bindings:
+        sendCommunication-out-0:
+          destination: send-communication
+
+        updateCommunication-in-0:
+          destination: communication-send
+          group: ${spring.application.name}
+
+      kafka:
+        binder:
+          brokers:
+            - localhost:9092
+
+
+#  rabbitmq:
+#    host: localhost
+#    port: 5672
+#    username: guest
+#    password: guest
+#    connection-timeout: 10s
+
+
 
 eureka:
   instance:
@@ -107,6 +133,8 @@ logging:
     com:
       easybanks:
         accounts: DEBUG
+  pattern:
+    level: "%5p [${spring.application.name},%X{trace_id},%X{span_id}]"
 
   #H2 Database config
 #  datasource:

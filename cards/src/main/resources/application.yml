@@ -27,6 +27,17 @@ spring:
         ddl-auto: update
       show-sql: true
 
+  cloud:
+    stream:
+      bindings:
+        sendConfirmation-out-0:
+          destination: send-confirmation
+
+      kafka:
+        binder:
+          brokers:
+            - localhost:9092
+
 eureka:
   instance:
     preferIpAddress: true
@@ -70,6 +81,8 @@ logging:
     com:
       easybank:
         cards: DEBUG
+  pattern:
+    level: "%5p [${spring.application.name},%X{trace_id},%X{span_id}]"
 
 
 

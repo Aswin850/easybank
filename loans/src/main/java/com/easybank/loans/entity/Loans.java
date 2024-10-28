@@ -33,4 +33,7 @@ public class Loans extends BaseEntity{
     @Column(name = "outstanding_amount")
     private int outstandingAmount;
 
+    @Column(name = "communication_sw")
+    private boolean communicationSw;
+
 }

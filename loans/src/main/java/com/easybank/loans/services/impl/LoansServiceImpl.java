@@ -2,32 +2,44 @@ package com.easybank.loans.services.impl;
 
 import com.easybank.loans.constant.LoansConstant;
 import com.easybank.loans.dto.LoanDTO;
+import com.easybank.loans.dto.LoansMessageDTO;
 import com.easybank.loans.entity.Loans;
 import com.easybank.loans.exception.LoanAlreadyExistsException;
 import com.easybank.loans.exception.ResourceNotFoundException;
 import com.easybank.loans.mapper.LoansMapper;
 import com.easybank.loans.repository.LoansRepository;
 import com.easybank.loans.services.ILoansService;
+import lombok.AllArgsConstructor;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.cloud.stream.function.StreamBridge;
 import org.springframework.stereotype.Service;
 
 import java.util.Optional;
 import java.util.Random;
 
 @Service
+@AllArgsConstructor
 public class LoansServiceImpl implements ILoansService {
-    private LoansRepository loansRepository;
+    public static final Logger LOGGER= LoggerFactory.getLogger(LoansServiceImpl.class);
 
-    @Autowired
-    public LoansServiceImpl(LoansRepository loansRepository){
-        this.loansRepository=loansRepository;
-    }
+    private LoansRepository loansRepository;
+    private StreamBridge streamBridge;
+
     public void createLoan(String mobileNumber) {
         Optional<Loans> loans=loansRepository.findByMobileNumber(mobileNumber);
         if(loans.isPresent()){
             throw new LoanAlreadyExistsException("Loan already registered with given mobileNumber "+mobileNumber);
         }
-        loansRepository.save(createNewLoan(mobileNumber));
+        Loans savedLoan= loansRepository.save(createNewLoan(mobileNumber));
+        sendConformation(savedLoan);
+    }
+
+    private void sendConformation(Loans savedLoan) {
+        var loansMessageDto = new LoansMessageDTO(savedLoan.getLoanNumber(),savedLoan.getMobileNumber(),savedLoan.getLoanType(),savedLoan.getTotalLoan());
+        var result = streamBridge.send("loansConformation-out-0",loansMessageDto);
+        LOGGER.info("Confirmation message triggered with details {} - {}",loansMessageDto,result);
     }
 
     private Loans createNewLoan(String mobileNumber) {
@@ -41,6 +53,7 @@ public class LoansServiceImpl implements ILoansService {
         newLoan.setAmountPaid(0);
         return newLoan;
     }
+
 
     @Override
     public LoanDTO getLoanDetails(String mobileNumber) {
@@ -67,5 +80,21 @@ public class LoansServiceImpl implements ILoansService {
         loansRepository.deleteById(loans.getLoanId());
         return true;
     }
+
+    @Override
+    public boolean updateCommunicationStatus(String loanAccountNumber) {
+        boolean isUpdated=false;
+        if(loanAccountNumber!=null){
+            Loans loans = loansRepository.findByLoanNumber(loanAccountNumber)
+                    .orElseThrow(()->new ResourceNotFoundException("Loans","loan number", loanAccountNumber));
+
+            loans.setCommunicationSw(true);
+            loansRepository.save(loans);
+            isUpdated=true;
+
+        }
+        return isUpdated;
+    }
+
 
 }

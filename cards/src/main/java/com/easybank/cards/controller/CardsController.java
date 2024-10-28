@@ -40,8 +40,9 @@ public class CardsController {
     @GetMapping("/fetch")
     public ResponseEntity<CardsDTO> fetchCardsDetails( @RequestHeader(name = "easybank_correlation_id") String correlationID,@RequestParam(name = "mobileNumber") @Pattern(regexp = "^[0-9]{10}$",message = "Invalid mobile number. Please check!") String mobileNumber){
 
-        LOGGER.debug("easyBank-correlation_id found :{}",correlationID);
+        LOGGER.debug("fetchCardsDetails method start");
         CardsDTO cardsDTO=cardsService.fetchCardDetails(mobileNumber);
+        LOGGER.debug("fetchCardsDetails method end");
         return ResponseEntity.status(HttpStatus.OK).body(cardsDTO);
     }
 

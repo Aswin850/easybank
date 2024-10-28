@@ -38,8 +38,9 @@ public class CustomerController {
     public ResponseEntity<CustomerDetailsDTO> fetchCustomerDetails(@RequestParam(name = "mobileNumber")  @Pattern(regexp = "($|[0-9]{10})",message = "Invalid mobile number") String mobileNumber,
                                                                    @RequestHeader(name = "easybank_correlation_id") String correlationId){
 
-        LOGGER.debug("easyBank-correlation_id found :{}",correlationId);
+        LOGGER.debug("fetchCustomerDetails method start");
         CustomerDetailsDTO customerDetailsDTO= iCustomerService.getCustomerDetail(mobileNumber,correlationId);
+        LOGGER.debug("fetchCustomerDetails method end");
         return ResponseEntity.status(HttpStatus.OK).body(customerDetailsDTO);
     }
 

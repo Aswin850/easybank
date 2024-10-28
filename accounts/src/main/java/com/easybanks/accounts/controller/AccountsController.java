@@ -37,8 +37,8 @@ import org.springframework.web.bind.annotation.*;
 public class AccountsController {
 
     public static final Logger LOGGER = LoggerFactory.getLogger(AccountsController.class);
-    private IAccountsService accountsService;
 
+    private IAccountsService accountsService;
     public AccountsController(AccountServiceImpl accountsService){
         this.accountsService=accountsService;
     }

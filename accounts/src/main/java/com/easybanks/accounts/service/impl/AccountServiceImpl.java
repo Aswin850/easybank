@@ -1,6 +1,7 @@
 package com.easybanks.accounts.service.impl;
 
 import com.easybanks.accounts.constants.AccountsConstant;
+import com.easybanks.accounts.dto.AccountsMessageDTO;
 import com.easybanks.accounts.entities.Accounts;
 import com.easybanks.accounts.exception.CustomerAlreadyExitsException;
 import com.easybanks.accounts.exception.ResourceNotFoundException;
@@ -14,6 +15,9 @@ import com.easybanks.accounts.mapper.AccountsMapper;
 import com.easybanks.accounts.mapper.CustomerMapper;
 import jakarta.transaction.Transactional;
 import lombok.AllArgsConstructor;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
+import org.springframework.cloud.stream.function.StreamBridge;
 import org.springframework.stereotype.Service;
 
 import java.util.Optional;
@@ -22,8 +26,11 @@ import java.util.Random;
 @Service
 @AllArgsConstructor
 public class AccountServiceImpl implements IAccountsService {
+    public static final Logger LOGGER= LoggerFactory.getLogger(AccountServiceImpl.class);
+
     private AccountsRepo accountsRepo;
     private CustomerRepo customerRepo;
+    private StreamBridge streamBridge;
 
     @Override
     public void createAccount(CustomerDTO customerDTO) throws CustomerAlreadyExitsException {
@@ -35,8 +42,16 @@ public class AccountServiceImpl implements IAccountsService {
         //save customer
         Customer savedCustomer= customerRepo.save(customer);
        //save account
-        accountsRepo.save(createNewAccounts(savedCustomer));
+        Accounts savedAccount = accountsRepo.save(createNewAccounts(savedCustomer));
+        sendCommunication(savedAccount,savedCustomer);
 
+    }
+
+    private void sendCommunication(Accounts savedAccount, Customer savedCustomer) {
+       var accountsMessageDTO = new AccountsMessageDTO(savedAccount.getAccountNumber(),savedCustomer.getName(),savedCustomer.getEmail(),savedCustomer.getMobileNumber());
+       LOGGER.info("Sending Communication request for the details{}",accountsMessageDTO);
+       var result= streamBridge.send("sendCommunication-out-0",accountsMessageDTO);
+       LOGGER.info("Is the Communication request successfully processed? :{}",result);
     }
 
     /*
@@ -100,6 +115,19 @@ public class AccountServiceImpl implements IAccountsService {
         customerRepo.deleteById(customer.getCustomerId());
         return true;
     }
+
+    @Override
+    public boolean updateCommunicationStatus(Long accountNumber) {
+        boolean isUpdated=false;
+        if(accountNumber!=null){
+            var account = accountsRepo.findById(accountNumber).orElseThrow(()->new ResourceNotFoundException("Accounts","Account Number",String.valueOf(accountNumber)));
+            account.setCommunicationSw(true);
+            accountsRepo.save(account);
+            isUpdated=true;
+        }
+        return isUpdated;
+    }
+
 
 }
 

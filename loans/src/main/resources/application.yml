@@ -14,6 +14,31 @@ spring:
   main:
    banner-mode: off
 
+  cloud:
+    function:
+      definition: updateCommunication;
+
+    stream:
+      bindings:
+        loansConformation-out-0:
+          destination: loans-conformation
+
+        updateCommunication-in-0:
+          destination: loans-conformation-sended
+          group: ${spring.application.name}
+
+      kafka:
+        binder:
+          brokers:
+            - localhost:9092
+
+#  rabbitmq:
+#    host: localhost
+#    port: 5672
+#    username: guest
+#    password: guest
+#    connection-timeout: 10s
+
   datasource:
     url: jdbc:h2:mem:testdb
     driverClassName: org.h2.Driver
@@ -76,6 +101,8 @@ logging:
     com:
       easybank:
         loans: DEBUG
+  pattern:
+    level: "%5p [${spring.application.name},%X{trace_id},%X{span_id}]"
 
 #  datasource:
 #   url: jdbc:mysql://localhost:3307/loansdb
